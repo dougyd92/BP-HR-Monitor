@@ -9,14 +9,23 @@
 #define BACKGROUND 1
 #define FOREGROUND 0
 
+#define WAITING_STATE 0
+#define READING_STATE 1
+
+#define BUTTON_PUSH_EVENT 1
+
 SPI spi(PE_6, PE_5, PE_2); // mosi, miso, sclk
 DigitalOut chip_select(PE_4);
 
 char display_buf[2][60];
+InterruptIn buttonInterrupt(USER_BUTTON,PullDown);
 
 uint8_t read_buf[32];
 
 LCD_DISCO_F429ZI lcd;
+
+uint8_t state;
+bool stateChanged;
 
 // sets the background layer
 // to be visible, transparent, and
@@ -42,6 +51,33 @@ void setup_foreground_layer()
   lcd.SetTextColor(LCD_COLOR_LIGHTGREEN);
 }
 
+void stateMachine(uint8_t event)
+
+{
+  switch (state)
+  {
+  case WAITING_STATE:
+    if (event == BUTTON_PUSH_EVENT)
+    {
+      state = READING_STATE;
+      stateChanged = true;
+    }
+    break;
+  case READING_STATE:
+    if (event == BUTTON_PUSH_EVENT)
+    {
+      state = WAITING_STATE;
+      stateChanged = true;
+    }
+    break;
+  }
+}
+
+//Button Interrupt
+void buttonEvent()
+{
+  stateMachine(BUTTON_PUSH_EVENT);  
+}
 
 void pressureReadingScene()
 {
@@ -77,12 +113,27 @@ void pressureReadingScene()
   snprintf(display_buf[0], 60, "Pressure %4.5f mmHg",gx);
 
   lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+}
 
-  thread_sleep_for(100);
+void waitingScene()
+{
+  snprintf(display_buf[0], 60, "TODO");
+  snprintf(display_buf[1], 60, "Instructions go here");
+
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
 }
 
 int main()
 {
+  state = WAITING_STATE;
+  stateChanged = true;
+
+  setup_background_layer();
+  setup_foreground_layer();
+  snprintf(display_buf[0], 60, "Initializing...");
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+
   // Chip must be deselected
   chip_select = 1;
 
@@ -91,18 +142,26 @@ int main()
   spi.format(8, 0);
   spi.frequency(50000);
 
-  setup_background_layer();
-  setup_foreground_layer();
-
-  snprintf(display_buf[0], 60, "Hello, world!");
-  snprintf(display_buf[1], 60, "From Doug and Mateo");
-
-  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
+  buttonInterrupt.rise(&buttonEvent);
 
   while (1)
   {
+    if (stateChanged) {
+      lcd.Clear(LCD_COLOR_BLACK);
+      stateChanged = false;
+    }
+    switch (state)
+    {
+    case WAITING_STATE:
+      waitingScene();
+      break;
+    case READING_STATE:
+      pressureReadingScene();
+      break;
+    default:
+      break;
+    }
 
-    pressureReadingScene();
+    thread_sleep_for(100);
   }
 }
