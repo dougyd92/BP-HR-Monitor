@@ -21,6 +21,7 @@ LCD_DISCO_F429ZI lcd;
 // sets the background layer
 // to be visible, transparent, and
 // resets its colors to all black
+
 void setup_background_layer()
 {
   lcd.SelectLayer(BACKGROUND);
@@ -41,6 +42,7 @@ void setup_foreground_layer()
   lcd.SetTextColor(LCD_COLOR_LIGHTGREEN);
 }
 
+
 void pressureReadingScene()
 {
   int32_t raw_gx;
@@ -48,15 +50,16 @@ void pressureReadingScene()
   uint8_t data1;
   uint8_t data2;
   uint8_t data3;
-  uint8_t status;
+  //uint8_t status;
 
   chip_select = 0;
-  status = spi.write(0xAA);
+  uint8_t status = spi.write(0xAA);
   spi.write(0x00);
   spi.write(0x00);
+  printf("Status 0 %02X \n",status);
   chip_select = 1;
-
-  thread_sleep_for(6);
+ 
+  thread_sleep_for(12);
 
   chip_select = 0;
   status = spi.write(0xF0);
@@ -70,6 +73,10 @@ void pressureReadingScene()
   raw_gx = ((((uint32_t)data1) << 16) | ((uint32_t)data2) << 8) | ((uint8_t)data3);
   gx = (((((float)raw_gx) - 419430.4) * (300)) / (3774873.6 - 419430.4));
   printf("Actual new pressure: %4.5f \n", gx);
+
+  snprintf(display_buf[0], 60, "Pressure %4.5f mmHg",gx);
+
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
 
   thread_sleep_for(100);
 }
@@ -95,6 +102,7 @@ int main()
 
   while (1)
   {
+
     pressureReadingScene();
   }
 }
