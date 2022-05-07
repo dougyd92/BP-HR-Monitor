@@ -9,8 +9,8 @@
 #define BACKGROUND 1
 #define FOREGROUND 0
 
-SPI spi(PA_7, PA_6, PA_5); // mosi, miso, sclk
-DigitalOut chip_select(PA_4);
+SPI spi(PE_6, PE_5, PE_2); // mosi, miso, sclk
+DigitalOut chip_select(PE_4);
 
 char display_buf[2][60];
 
@@ -56,10 +56,10 @@ void pressureReadingScene()
   uint8_t status = spi.write(0xAA);
   spi.write(0x00);
   spi.write(0x00);
-  printf("Status 0 %02X \n",status);
+  //printf("Status 0 %02X \n",status);
   chip_select = 1;
  
-  thread_sleep_for(12);
+  thread_sleep_for(6);
 
   chip_select = 0;
   status = spi.write(0xF0);
