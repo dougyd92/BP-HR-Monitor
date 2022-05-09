@@ -8,6 +8,7 @@
 
 #define BACKGROUND 1
 #define FOREGROUND 0
+#define GRAPH_PADDING 5
 
 #define WAITING_STATE 0
 #define READING_STATE 1
@@ -24,8 +25,14 @@ uint8_t read_buf[32];
 
 LCD_DISCO_F429ZI lcd;
 
+uint32_t graph_width=lcd.GetXSize()-2*GRAPH_PADDING;
+uint32_t graph_height=graph_width;
+
 uint8_t state;
 bool stateChanged;
+
+float pressureY[1000];
+uint16_t numReadings;
 
 // sets the background layer
 // to be visible, transparent, and
@@ -49,6 +56,19 @@ void setup_foreground_layer()
   lcd.Clear(LCD_COLOR_BLACK);
   lcd.SetBackColor(LCD_COLOR_BLACK);
   lcd.SetTextColor(LCD_COLOR_LIGHTGREEN);
+}
+
+//draws a rectangle with horizontal tick marks
+//on the background layer. The spacing between tick
+//marks in pixels is taken as a parameter
+void draw_graph_window(uint32_t horiz_tick_spacing){
+  lcd.SelectLayer(BACKGROUND);
+  
+  lcd.DrawRect(GRAPH_PADDING,GRAPH_PADDING,graph_width,graph_width);
+  //draw the x-axis tick marks
+  for (uint32_t i = 0 ; i < graph_width;i+=horiz_tick_spacing){
+    lcd.DrawVLine(GRAPH_PADDING+i,graph_height,GRAPH_PADDING);
+  }
 }
 
 void stateMachine(uint8_t event)
@@ -79,10 +99,17 @@ void buttonEvent()
   stateMachine(BUTTON_PUSH_EVENT);  
 }
 
+void setUpPressureReadingScene()
+{
+  lcd.Clear(LCD_COLOR_BLACK);
+  draw_graph_window(10);
+  numReadings = 0;
+}
+
 void pressureReadingScene()
 {
-  int32_t raw_gx;
-  float gx;
+  int32_t raw_pressure;
+  float pressure;
   uint8_t data1;
   uint8_t data2;
   uint8_t data3;
@@ -106,13 +133,18 @@ void pressureReadingScene()
 
   chip_select = 1;
 
-  raw_gx = ((((uint32_t)data1) << 16) | ((uint32_t)data2) << 8) | ((uint8_t)data3);
-  gx = (((((float)raw_gx) - 419430.4) * (300)) / (3774873.6 - 419430.4));
-  printf("Actual new pressure: %4.5f \n", gx);
+  raw_pressure = ((((uint32_t)data1) << 16) | ((uint32_t)data2) << 8) | ((uint8_t)data3);
+  pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
+  printf("Actual new pressure: %4.5f \n", pressure);
 
-  snprintf(display_buf[0], 60, "Pressure %4.5f mmHg",gx);
+  snprintf(display_buf[0], 60, "Pressure %4.5f mmHg",pressure);
 
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
+  pressureY[numReadings] = pressure;
+
+  uint16_t mapY = GRAPH_PADDING+graph_height - pressure/ 200*graph_height;
+  lcd.DrawPixel(numReadings+GRAPH_PADDING,mapY,LCD_COLOR_BLUE);
+  numReadings++;
 }
 
 void waitingScene()
@@ -146,22 +178,27 @@ int main()
 
   while (1)
   {
-    if (stateChanged) {
-      lcd.Clear(LCD_COLOR_BLACK);
-      stateChanged = false;
-    }
     switch (state)
     {
     case WAITING_STATE:
+      if(stateChanged)
+      {
+        lcd.Clear(LCD_COLOR_BLACK);
+      }
       waitingScene();
       break;
     case READING_STATE:
+      if(stateChanged)
+      {
+        setUpPressureReadingScene();
+      }
       pressureReadingScene();
       break;
     default:
       break;
     }
+    stateChanged = false;
 
-    thread_sleep_for(100);
+    thread_sleep_for(200);
   }
 }
