@@ -12,8 +12,12 @@
 
 #define WAITING_STATE 0
 #define READING_STATE 1
+#define ANALYSIS_STATE 2
+#define RESULTS_STATE 3
 
 #define BUTTON_PUSH_EVENT 1
+#define PRESSURE_MIN_EVENT 2
+#define ANALYSIS_COMPLETE_EVENT 3
 
 SPI spi(PE_6, PE_5, PE_2); // mosi, miso, sclk
 DigitalOut chip_select(PE_4);
@@ -32,8 +36,10 @@ uint8_t state;
 bool stateChanged;
 
 float pressureY[1000];
+int Heart_Rate;
 uint16_t numReadings;
 
+bool MaxPressure_Reached = false;
 // sets the background layer
 // to be visible, transparent, and
 // resets its colors to all black
@@ -84,13 +90,36 @@ void stateMachine(uint8_t event)
     }
     break;
   case READING_STATE:
-    if (event == BUTTON_PUSH_EVENT)
+    switch (event)
+    {
+    case BUTTON_PUSH_EVENT:
+      state = WAITING_STATE;
+      stateChanged = true;
+      break;
+    case PRESSURE_MIN_EVENT:
+      state = ANALYSIS_STATE;
+      stateChanged = true;
+      break;
+    default:
+      break;
+    }
+    break;
+  case ANALYSIS_STATE:
+    if(event == ANALYSIS_COMPLETE_EVENT)
+    {
+      state = RESULTS_STATE;
+      stateChanged = true;
+    }
+    break;
+  case RESULTS_STATE:
+    if(event == BUTTON_PUSH_EVENT)
     {
       state = WAITING_STATE;
       stateChanged = true;
     }
     break;
   }
+
 }
 
 //Button Interrupt
@@ -104,6 +133,7 @@ void setUpPressureReadingScene()
   lcd.Clear(LCD_COLOR_BLACK);
   draw_graph_window(10);
   numReadings = 0;
+  MaxPressure_Reached = false;
 }
 
 void pressureReadingScene()
@@ -145,6 +175,15 @@ void pressureReadingScene()
   uint16_t mapY = GRAPH_PADDING+graph_height - pressure/ 200*graph_height;
   lcd.DrawPixel(numReadings+GRAPH_PADDING,mapY,LCD_COLOR_BLUE);
   numReadings++;
+
+  if(pressure >= 150)
+  {
+    MaxPressure_Reached = true;
+  }
+  else if (MaxPressure_Reached && pressure < 30)
+  {
+    stateMachine(PRESSURE_MIN_EVENT);
+  }
 }
 
 void waitingScene()
@@ -154,6 +193,53 @@ void waitingScene()
 
   lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
   lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
+}
+
+void dataAnalysis()
+{
+  //Heart Rate
+  //(present value - last value)/200ms
+  snprintf(display_buf[0], 60, "Analyzing data...");
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+
+  int startingIndex;
+  int indexBPM[200];
+  int numBeats = 0;
+  int total_Time_Beats = 0;
+  for(int i=0; i<numReadings; i++)
+  {
+    if(pressureY[i] > 150)
+    {
+      startingIndex = i;
+      break;
+    }
+  }
+  printf("Starting index %d \n", startingIndex);
+  for (int i = startingIndex; i < numReadings-1; i++)
+  {
+    if(pressureY[i]>pressureY[i-1] && pressureY[i]>pressureY[i+1])
+    {
+      indexBPM[numBeats] = i;
+      numBeats++; 
+    }
+  }
+  printf("Num beats %d \n", numBeats);
+  for (int i = 1; i < numBeats; i++)
+  {
+    total_Time_Beats += indexBPM[i]-indexBPM[i-1];
+  }
+  //Heart rate
+  Heart_Rate = float(total_Time_Beats)/(numBeats-1) * (0.2) * 60;
+  printf("Heart Rate: %d \n", Heart_Rate);
+  stateMachine(ANALYSIS_COMPLETE_EVENT);
+}
+
+void resultsScene()
+{
+  snprintf(display_buf[0], 60, "Your Heart Rate is: ");
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+  snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
 }
 
 int main()
@@ -184,6 +270,7 @@ int main()
       if(stateChanged)
       {
         lcd.Clear(LCD_COLOR_BLACK);
+        stateChanged = false;
       }
       waitingScene();
       break;
@@ -191,14 +278,30 @@ int main()
       if(stateChanged)
       {
         setUpPressureReadingScene();
+        stateChanged = false;
       }
       pressureReadingScene();
+      break;
+    case ANALYSIS_STATE:
+      if(stateChanged)
+      {
+        lcd.Clear(LCD_COLOR_BLACK);
+        stateChanged = false;
+      }
+      dataAnalysis();
+      break;
+    case RESULTS_STATE:
+      if(stateChanged)
+      {
+        lcd.Clear(LCD_COLOR_BLACK);
+        stateChanged = false;
+      }
+      resultsScene();
       break;
     default:
       break;
     }
-    stateChanged = false;
-
+    //stateChanged = false;
     thread_sleep_for(200);
   }
 }
