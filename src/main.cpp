@@ -174,7 +174,7 @@ void pressureReadingScene()
 
   uint16_t mapY = GRAPH_PADDING+graph_height - pressure/ 200*graph_height;
   lcd.DrawPixel(numReadings+GRAPH_PADDING,mapY,LCD_COLOR_BLUE);
-  numReadings++;
+
 
   if(pressure >= 150)
   {
@@ -184,6 +184,15 @@ void pressureReadingScene()
   {
     stateMachine(PRESSURE_MIN_EVENT);
   }
+  if (MaxPressure_Reached && pressureY[numReadings-1] - pressure > 0.8)
+  {
+    snprintf(display_buf[1], 60, "Slow Down");
+    lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
+  }else
+  {
+    lcd.ClearStringLine(LINE(16));
+  }
+  numReadings++;
 }
 
 void waitingScene()
@@ -203,8 +212,10 @@ void dataAnalysis()
   lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
 
   int startingIndex;
-  int indexBPM[200];
+  int localMax[200];
+  int localMin[200];
   int numBeats = 0;
+  int minCounter = 0;
   int total_Time_Beats = 0;
   for(int i=0; i<numReadings; i++)
   {
@@ -219,14 +230,14 @@ void dataAnalysis()
   {
     if(pressureY[i]>pressureY[i-1] && pressureY[i]>pressureY[i+1])
     {
-      indexBPM[numBeats] = i;
+      localMax[numBeats] = i;
       numBeats++; 
     }
   }
   printf("Num beats %d \n", numBeats);
   for (int i = 1; i < numBeats; i++)
   {
-    total_Time_Beats += indexBPM[i]-indexBPM[i-1];
+    total_Time_Beats += localMax[i]-localMax[i-1];
   }
   //Heart rate
   Heart_Rate = float(total_Time_Beats)/(numBeats-1) * (0.2) * 60;
