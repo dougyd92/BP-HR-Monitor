@@ -14,10 +14,12 @@
 #define READING_STATE 1
 #define ANALYSIS_STATE 2
 #define RESULTS_STATE 3
+#define ERROR_STATE 4
 
 #define BUTTON_PUSH_EVENT 1
 #define PRESSURE_MIN_EVENT 2
 #define ANALYSIS_COMPLETE_EVENT 3
+#define ERROR_EVENT 4
 
 SPI spi(PE_6, PE_5, PE_2); // mosi, miso, sclk
 DigitalOut chip_select(PE_4);
@@ -42,6 +44,10 @@ int diastolic_pressure;
 uint16_t numReadings;
 
 bool MaxPressure_Reached = false;
+bool Beats_Error = false;
+bool Array_Error = false;
+bool Slow_deflation = false;
+
 // sets the background layer
 // to be visible, transparent, and
 // resets its colors to all black
@@ -82,7 +88,6 @@ void draw_graph_window(uint32_t horiz_tick_spacing)
 }
 
 void stateMachine(uint8_t event)
-
 {
   switch (state)
   {
@@ -113,9 +118,20 @@ void stateMachine(uint8_t event)
     {
       state = RESULTS_STATE;
       stateChanged = true;
+    }else if (event == ERROR_EVENT)
+    {
+      state = ERROR_STATE;
+      stateChanged = true;
     }
     break;
   case RESULTS_STATE:
+    if (event == BUTTON_PUSH_EVENT)
+    {
+      state = WAITING_STATE;
+      stateChanged = true;
+    }
+    break;
+  case ERROR_STATE:
     if (event == BUTTON_PUSH_EVENT)
     {
       state = WAITING_STATE;
@@ -187,16 +203,24 @@ void pressureReadingScene()
   {
     stateMachine(PRESSURE_MIN_EVENT);
   }
-  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 0.8)
+  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 4)
   {
-    snprintf(display_buf[1], 60, "Slow Down");
+    snprintf(display_buf[1], 60, "Realeasing air too fast");
     lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
   }
   else
   {
     lcd.ClearStringLine(LINE(16));
   }
+
   numReadings++;
+  printf("Num %d\n", numReadings);
+  if(numReadings >= 10)
+  {
+    Array_Error = true;
+    stateMachine(ERROR_EVENT);
+    return;
+  }
 }
 
 void waitingScene()
@@ -254,7 +278,13 @@ void dataAnalysis()
     }
   }
   printf("Num beats %d \n", numBeats);
-
+  if (numBeats == 0 || numBeats < 3)
+  {
+    Beats_Error = true;
+    stateMachine(ERROR_EVENT);
+    return;
+  }
+  
   float max_amplitude = 0;
   int max_amp_index = startingIndex;
 
@@ -300,6 +330,33 @@ void resultsScene()
   lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
   lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
   lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+}
+
+void errorScene()
+{
+  if(Beats_Error)
+  {
+    snprintf(display_buf[0], 60, "ERROR!!!!");
+    snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
+    snprintf(display_buf[2], 60, "Your blood pressure is:");
+    snprintf(display_buf[3], 60, "%d / %d", systolic_pressure, diastolic_pressure);
+
+    lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+  }else if (Array_Error)
+  {
+    snprintf(display_buf[0], 60, "ERROR array!");
+    snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
+    snprintf(display_buf[2], 60, "Your blood pressure is:");
+    snprintf(display_buf[3], 60, "%d / %d", systolic_pressure, diastolic_pressure);
+
+    lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
+    lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+  }
 }
 
 int main()
@@ -357,6 +414,14 @@ int main()
         stateChanged = false;
       }
       resultsScene();
+      break;
+    case ERROR_STATE:
+      if (stateChanged)
+      {
+        lcd.Clear(LCD_COLOR_BLACK);
+        stateChanged = false;
+      }
+      errorScene();
       break;
     default:
       break;
