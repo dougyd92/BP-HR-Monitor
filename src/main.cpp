@@ -1,26 +1,22 @@
 #include <mbed.h>
 #include "drivers/LCD_DISCO_F429ZI.h"
-
-#define STATUS_BYTE 0xF0
-#define OUT_DATA_1 0x00
-#define OUT_DATA_2 0x00
-#define OUT_DATA_3 0x00
+#include "sensor.h"
 
 #define BACKGROUND 1
 #define FOREGROUND 0
 #define GRAPH_PADDING 5
 
-#define WAITING_STATE 0
-#define READING_STATE 1
-#define ANALYSIS_STATE 2
-#define RESULTS_STATE 3
+#define WAITING_STATE 1
+#define READING_STATE 2
+#define ANALYSIS_STATE 3
+#define RESULTS_STATE 4
 
 #define BUTTON_PUSH_EVENT 1
 #define PRESSURE_MIN_EVENT 2
 #define ANALYSIS_COMPLETE_EVENT 3
 
-SPI spi(PE_6, PE_5, PE_2); // mosi, miso, sclk
-DigitalOut chip_select(PE_4);
+volatile uint8_t state;
+volatile bool stateChanged;
 
 char display_buf[4][60];
 InterruptIn buttonInterrupt(USER_BUTTON, PullDown);
@@ -31,9 +27,6 @@ LCD_DISCO_F429ZI lcd;
 
 uint32_t graph_width = lcd.GetXSize() - 2 * GRAPH_PADDING;
 uint32_t graph_height = graph_width;
-
-uint8_t state;
-bool stateChanged;
 
 float pressureY[1000];
 int Heart_Rate;
@@ -82,27 +75,25 @@ void draw_graph_window(uint32_t horiz_tick_spacing)
 }
 
 void stateMachine(uint8_t event)
-
 {
+  uint8_t next_state = state;
+
   switch (state)
   {
   case WAITING_STATE:
     if (event == BUTTON_PUSH_EVENT)
     {
-      state = READING_STATE;
-      stateChanged = true;
+      next_state = READING_STATE;
     }
     break;
   case READING_STATE:
     switch (event)
     {
     case BUTTON_PUSH_EVENT:
-      state = WAITING_STATE;
-      stateChanged = true;
+      next_state = WAITING_STATE;
       break;
     case PRESSURE_MIN_EVENT:
-      state = ANALYSIS_STATE;
-      stateChanged = true;
+      next_state = ANALYSIS_STATE;
       break;
     default:
       break;
@@ -111,17 +102,21 @@ void stateMachine(uint8_t event)
   case ANALYSIS_STATE:
     if (event == ANALYSIS_COMPLETE_EVENT)
     {
-      state = RESULTS_STATE;
-      stateChanged = true;
+      next_state = RESULTS_STATE;
     }
     break;
   case RESULTS_STATE:
     if (event == BUTTON_PUSH_EVENT)
     {
-      state = WAITING_STATE;
-      stateChanged = true;
+      next_state = WAITING_STATE;
     }
     break;
+  }
+
+  if (next_state != state)
+  {
+    stateChanged = true;
+    state = next_state;
   }
 }
 
@@ -141,35 +136,8 @@ void setUpPressureReadingScene()
 
 void pressureReadingScene()
 {
-  int32_t raw_pressure;
-  float pressure;
-  uint8_t data1;
-  uint8_t data2;
-  uint8_t data3;
-  // uint8_t status;
-
-  chip_select = 0;
-  uint8_t status = spi.write(0xAA);
-  spi.write(0x00);
-  spi.write(0x00);
-  // printf("Status 0 %02X \n",status);
-  chip_select = 1;
-
-  thread_sleep_for(6);
-
-  chip_select = 0;
-  status = spi.write(0xF0);
-
-  data1 = spi.write(OUT_DATA_1);
-  data2 = spi.write(OUT_DATA_2);
-  data3 = spi.write(OUT_DATA_3);
-
-  chip_select = 1;
-
-  raw_pressure = ((((uint32_t)data1) << 16) | ((uint32_t)data2) << 8) | ((uint8_t)data3);
-  pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
-  //printf("Actual new pressure: %4.5f %d \n", pressure,numReadings);
-  printf("%4.5f\n",pressure);
+  float pressure = readPressure();
+  printf("%4.5f\n", pressure);
 
   snprintf(display_buf[0], 60, "Pressure %4.5f mmHg", pressure);
 
@@ -238,9 +206,9 @@ void dataAnalysis()
   int total_Time_Beats = 0;
   for (int i = 0; i < numReadings; i++)
   {
-    if (pressureY[i] > 150 && pressureY[i] > pressureY[i+1])
+    if (pressureY[i] > 150 && pressureY[i] > pressureY[i + 1])
     {
-      startingIndex = i+1;
+      startingIndex = i + 1;
       break;
     }
   }
@@ -263,7 +231,7 @@ void dataAnalysis()
     total_Time_Beats += localMax[i + 1] - localMax[i];
 
     int min_index = findMinIndex(localMax[i], localMax[i + 1], pressureY);
-    printf("Min index between %d %d = %d \n",localMax[i],localMax[i+1],min_index);
+    printf("Min index between %d %d = %d \n", localMax[i], localMax[i + 1], min_index);
     float amplitude = pressureY[localMax[i]] - pressureY[min_index];
     printf("Amplitude: %4.0f \n", amplitude);
 
@@ -312,13 +280,7 @@ int main()
   snprintf(display_buf[0], 60, "Initializing...");
   lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
 
-  // Chip must be deselected
-  chip_select = 1;
-
-  // Setup the spi for 8 bit data, high steady state clock,
-  // second edge capture, with a 5KHz clock rate
-  spi.format(8, 0);
-  spi.frequency(50000);
+  setupSensor();
 
   buttonInterrupt.rise(&buttonEvent);
 
