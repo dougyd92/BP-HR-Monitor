@@ -35,7 +35,7 @@ float readPressure()
   raw_pressure = ((((uint32_t)read_buffer[1]) << 16) | ((uint32_t)read_buffer[2]) << 8) | ((uint8_t)read_buffer[3]);
   pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
 
-  printf("Pressure: %4.5f %d \n", pressure);
+  printf("Pressure: %4.5f \n", pressure);
 
   return pressure;
 }

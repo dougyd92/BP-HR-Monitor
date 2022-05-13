@@ -1,10 +1,6 @@
 #include <mbed.h>
-#include "drivers/LCD_DISCO_F429ZI.h"
 #include "sensor.h"
-
-#define BACKGROUND 1
-#define FOREGROUND 0
-#define GRAPH_PADDING 5
+#include "graphics.h"
 
 #define WAITING_STATE 1
 #define READING_STATE 2
@@ -18,15 +14,9 @@
 volatile uint8_t state;
 volatile bool stateChanged;
 
-char display_buf[4][60];
 InterruptIn buttonInterrupt(USER_BUTTON, PullDown);
 
 uint8_t read_buf[32];
-
-LCD_DISCO_F429ZI lcd;
-
-uint32_t graph_width = lcd.GetXSize() - 2 * GRAPH_PADDING;
-uint32_t graph_height = graph_width;
 
 float pressureY[1000];
 int Heart_Rate;
@@ -35,44 +25,6 @@ int diastolic_pressure;
 uint16_t numReadings;
 
 bool MaxPressure_Reached = false;
-// sets the background layer
-// to be visible, transparent, and
-// resets its colors to all black
-
-void setup_background_layer()
-{
-  lcd.SelectLayer(BACKGROUND);
-  lcd.Clear(LCD_COLOR_BLACK);
-  lcd.SetBackColor(LCD_COLOR_BLACK);
-  lcd.SetTextColor(LCD_COLOR_GREEN);
-  lcd.SetLayerVisible(BACKGROUND, ENABLE);
-  lcd.SetTransparency(BACKGROUND, 0x7Fu);
-}
-
-// resets the foreground layer to
-// all black
-void setup_foreground_layer()
-{
-  lcd.SelectLayer(FOREGROUND);
-  lcd.Clear(LCD_COLOR_BLACK);
-  lcd.SetBackColor(LCD_COLOR_BLACK);
-  lcd.SetTextColor(LCD_COLOR_LIGHTGREEN);
-}
-
-// draws a rectangle with horizontal tick marks
-// on the background layer. The spacing between tick
-// marks in pixels is taken as a parameter
-void draw_graph_window(uint32_t horiz_tick_spacing)
-{
-  lcd.SelectLayer(BACKGROUND);
-
-  lcd.DrawRect(GRAPH_PADDING, GRAPH_PADDING, graph_width, graph_width);
-  // draw the x-axis tick marks
-  for (uint32_t i = 0; i < graph_width; i += horiz_tick_spacing)
-  {
-    lcd.DrawVLine(GRAPH_PADDING + i, graph_height, GRAPH_PADDING);
-  }
-}
 
 void stateMachine(uint8_t event)
 {
@@ -128,7 +80,7 @@ void buttonEvent()
 
 void setUpPressureReadingScene()
 {
-  lcd.Clear(LCD_COLOR_BLACK);
+  clear_screen();
   draw_graph_window(10);
   numReadings = 0;
   MaxPressure_Reached = false;
@@ -137,15 +89,12 @@ void setUpPressureReadingScene()
 void pressureReadingScene()
 {
   float pressure = readPressure();
-  printf("%4.5f\n", pressure);
 
-  snprintf(display_buf[0], 60, "Pressure %4.5f mmHg", pressure);
+  display_current_pressure(pressure);
 
-  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
   pressureY[numReadings] = pressure;
 
-  uint16_t mapY = GRAPH_PADDING + graph_height - pressure / 200 * graph_height;
-  lcd.DrawPixel(numReadings + GRAPH_PADDING, mapY, LCD_COLOR_BLUE);
+  graph_pressure_value(pressure, numReadings);
 
   if (pressure >= 150)
   {
@@ -157,23 +106,18 @@ void pressureReadingScene()
   }
   if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 0.8)
   {
-    snprintf(display_buf[1], 60, "Slow Down");
-    lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
+    display_slow_down_message();
   }
   else
   {
-    lcd.ClearStringLine(LINE(16));
+    clear_slow_down_message();
   }
   numReadings++;
 }
 
 void waitingScene()
 {
-  snprintf(display_buf[0], 60, "TODO");
-  snprintf(display_buf[1], 60, "Instructions go here");
-
-  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
+  display_instructions();
 }
 
 int findMinIndex(int start, int end, float *arr)
@@ -195,14 +139,12 @@ void dataAnalysis()
 {
   // Heart Rate
   //(present value - last value)/200ms
-  snprintf(display_buf[0], 60, "Analyzing data...");
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+
+  display_analyzing_data_message();
 
   int startingIndex;
   int localMax[200];
-  int localMin[200];
   int numBeats = 0;
-  int minCounter = 0;
   int total_Time_Beats = 0;
   for (int i = 0; i < numReadings; i++)
   {
@@ -259,15 +201,7 @@ void dataAnalysis()
 
 void resultsScene()
 {
-  snprintf(display_buf[0], 60, "Your Heart Rate is: ");
-  snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
-  snprintf(display_buf[2], 60, "Your blood pressure is:");
-  snprintf(display_buf[3], 60, "%d / %d", systolic_pressure, diastolic_pressure);
-
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+  display_results(Heart_Rate, systolic_pressure, diastolic_pressure);
 }
 
 int main()
@@ -277,8 +211,6 @@ int main()
 
   setup_background_layer();
   setup_foreground_layer();
-  snprintf(display_buf[0], 60, "Initializing...");
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
 
   setupSensor();
 
@@ -291,7 +223,7 @@ int main()
     case WAITING_STATE:
       if (stateChanged)
       {
-        lcd.Clear(LCD_COLOR_BLACK);
+        clear_screen();
         stateChanged = false;
       }
       waitingScene();
@@ -307,7 +239,7 @@ int main()
     case ANALYSIS_STATE:
       if (stateChanged)
       {
-        lcd.Clear(LCD_COLOR_BLACK);
+        clear_screen();
         stateChanged = false;
       }
       dataAnalysis();
@@ -315,7 +247,7 @@ int main()
     case RESULTS_STATE:
       if (stateChanged)
       {
-        lcd.Clear(LCD_COLOR_BLACK);
+        clear_screen();
         stateChanged = false;
       }
       resultsScene();
