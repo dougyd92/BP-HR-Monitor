@@ -168,7 +168,8 @@ void pressureReadingScene()
 
   raw_pressure = ((((uint32_t)data1) << 16) | ((uint32_t)data2) << 8) | ((uint8_t)data3);
   pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
-  printf("Actual new pressure: %4.5f \n", pressure);
+  //printf("Actual new pressure: %4.5f %d \n", pressure,numReadings);
+  printf("%4.5f\n",pressure);
 
   snprintf(display_buf[0], 60, "Pressure %4.5f mmHg", pressure);
 
@@ -237,9 +238,9 @@ void dataAnalysis()
   int total_Time_Beats = 0;
   for (int i = 0; i < numReadings; i++)
   {
-    if (pressureY[i] > 150)
+    if (pressureY[i] > 150 && pressureY[i] > pressureY[i+1])
     {
-      startingIndex = i;
+      startingIndex = i+1;
       break;
     }
   }
@@ -262,7 +263,9 @@ void dataAnalysis()
     total_Time_Beats += localMax[i + 1] - localMax[i];
 
     int min_index = findMinIndex(localMax[i], localMax[i + 1], pressureY);
+    printf("Min index between %d %d = %d \n",localMax[i],localMax[i+1],min_index);
     float amplitude = pressureY[localMax[i]] - pressureY[min_index];
+    printf("Amplitude: %4.0f \n", amplitude);
 
     if (amplitude > max_amplitude)
     {
@@ -270,13 +273,15 @@ void dataAnalysis()
       max_amp_index = localMax[i];
     }
   }
-
+  printf("Max amplitude index %d\n", max_amp_index);
+  printf("Local max %d\n", localMax[0]);
   // Blood pressure
   systolic_pressure = pressureY[localMax[0]];
 
   int diastolic_index = 2 * max_amp_index - localMax[0];
   diastolic_pressure = pressureY[diastolic_index];
 
+  printf("Diastolic index %d\n", diastolic_index);
   // Heart rate
   Heart_Rate = float(total_Time_Beats) / (numBeats - 1) * (0.2) * 60;
   printf("Heart Rate: %d \n", Heart_Rate);
