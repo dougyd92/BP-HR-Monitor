@@ -8,7 +8,7 @@
 #define FOREGROUND 0
 #define GRAPH_PADDING 5
 
-static LCD_DISCO_F429ZI lcd;
+LCD_DISCO_F429ZI lcd;
 
 uint32_t graph_width = lcd.GetXSize() - 2 * GRAPH_PADDING;
 uint32_t graph_height = graph_width;
@@ -111,11 +111,15 @@ void display_results(int hr, int systolic, int diastolic)
 
 void displayHeartBeatNotDetected()
 {
-
+  snprintf(display_buf[0], 60, "No heartbeat detected.");
+  snprintf(display_buf[1], 60, "Are you a zombie?");
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
 }
 
 void displayTimeOutError()
 {
-  
+  snprintf(display_buf[0], 60, "Timed out");
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
 }
 #endif
