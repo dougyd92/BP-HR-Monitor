@@ -242,26 +242,11 @@ void errorScene()
 {
   if(Beats_Error)
   {
-    snprintf(display_buf[0], 60, "ERROR!!!!");
-    snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
-    snprintf(display_buf[2], 60, "Your blood pressure is:");
-    snprintf(display_buf[3], 60, "%d / %d", systolic_pressure, diastolic_pressure);
-
-    lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+    displayHeartBeatNotDetected();
+  
   }else if (Array_Error)
   {
-    snprintf(display_buf[0], 60, "ERROR array!");
-    snprintf(display_buf[1], 60, "%d BPM", Heart_Rate);
-    snprintf(display_buf[2], 60, "Your blood pressure is:");
-    snprintf(display_buf[3], 60, "%d / %d", systolic_pressure, diastolic_pressure);
-
-    lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[2], LEFT_MODE);
-    lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
+    displayTimeOutError();
   }
 }
 
