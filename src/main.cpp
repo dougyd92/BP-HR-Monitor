@@ -1,15 +1,13 @@
 #include <mbed.h>
 #include "sensor.h"
 #include "graphics.h"
-
-
+#include "analysis.h"
 
 #define WAITING_STATE 0
 #define READING_STATE 1
 #define ANALYSIS_STATE 2
 #define RESULTS_STATE 3
 #define ERROR_STATE 4
-
 
 #define BUTTON_PUSH_EVENT 1
 #define PRESSURE_MIN_EVENT 2
@@ -18,6 +16,10 @@
 
 volatile uint8_t state;
 volatile bool stateChanged;
+
+bool Beats_Error = false;
+bool Array_Error = false;
+bool Slow_deflation = false;
 
 InterruptIn buttonInterrupt(USER_BUTTON, PullDown);
 
@@ -30,12 +32,6 @@ int diastolic_pressure;
 uint16_t numReadings;
 
 bool MaxPressure_Reached = false;
-
-bool Beats_Error = false;
-bool Array_Error = false;
-bool Slow_deflation = false;
-
-
 
 void stateMachine(uint8_t event)
 {
@@ -66,7 +62,8 @@ void stateMachine(uint8_t event)
     if (event == ANALYSIS_COMPLETE_EVENT)
     {
       next_state = RESULTS_STATE;
-    }else if (event == ERROR_EVENT)
+    }
+    else if (event == ERROR_EVENT)
     {
       next_state = ERROR_STATE;
     }
@@ -135,7 +132,7 @@ void pressureReadingScene()
 
   numReadings++;
   printf("Num %d\n", numReadings);
-  if(numReadings >= 10)
+  if (numReadings >= 10)
   {
     Array_Error = true;
     stateMachine(ERROR_EVENT);
@@ -148,89 +145,19 @@ void waitingScene()
   display_instructions();
 }
 
-int findMinIndex(int start, int end, float *arr)
+void analysisScene()
 {
-  float min = arr[start];
-  int min_index = start;
-  for (int i = start; i <= end; i++)
-  {
-    if (arr[i] < min)
-    {
-      min = arr[i];
-      min_index = i;
-    }
-  }
-  return min_index;
-}
-
-void dataAnalysis()
-{
-  // Heart Rate
-  //(present value - last value)/200ms
-
   display_analyzing_data_message();
 
-  int startingIndex;
-  int localMax[200];
-  int numBeats = 0;
-  int total_Time_Beats = 0;
-  for (int i = 0; i < numReadings; i++)
-  {
-    if (pressureY[i] > 150 && pressureY[i] > pressureY[i + 1])
-    {
-      startingIndex = i + 1;
-      break;
-    }
-  }
-  printf("Starting index %d \n", startingIndex);
-  for (int i = startingIndex; i < numReadings - 1; i++)
-  {
-    if (pressureY[i] > pressureY[i - 1] && pressureY[i] > pressureY[i + 1])
-    {
-      localMax[numBeats] = i;
-      numBeats++;
-    }
-  }
-  printf("Num beats %d \n", numBeats);
-  if (numBeats == 0 || numBeats < 3)
+  int error = analyze_data(pressureY, numReadings, systolic_pressure, diastolic_pressure, Heart_Rate);
+
+  if (error != 0)
   {
     Beats_Error = true;
     stateMachine(ERROR_EVENT);
-    return;
   }
-  
-  float max_amplitude = 0;
-  int max_amp_index = startingIndex;
-
-  for (int i = 0; i < numBeats - 1; i++)
-  {
-    total_Time_Beats += localMax[i + 1] - localMax[i];
-
-    int min_index = findMinIndex(localMax[i], localMax[i + 1], pressureY);
-    printf("Min index between %d %d = %d \n", localMax[i], localMax[i + 1], min_index);
-    float amplitude = pressureY[localMax[i]] - pressureY[min_index];
-    printf("Amplitude: %4.0f \n", amplitude);
-
-    if (amplitude > max_amplitude)
-    {
-      max_amplitude = amplitude;
-      max_amp_index = localMax[i];
-    }
-  }
-  printf("Max amplitude index %d\n", max_amp_index);
-  printf("Local max %d\n", localMax[0]);
-  // Blood pressure
-  systolic_pressure = pressureY[localMax[0]];
-
-  int diastolic_index = 2 * max_amp_index - localMax[0];
-  diastolic_pressure = pressureY[diastolic_index];
-
-  printf("Diastolic index %d\n", diastolic_index);
-  // Heart rate
-  Heart_Rate = float(total_Time_Beats) / (numBeats - 1) * (0.2) * 60;
-  printf("Heart Rate: %d \n", Heart_Rate);
-
-  stateMachine(ANALYSIS_COMPLETE_EVENT);
+  else
+    stateMachine(ANALYSIS_COMPLETE_EVENT);
 }
 
 void resultsScene()
@@ -240,11 +167,11 @@ void resultsScene()
 
 void errorScene()
 {
-  if(Beats_Error)
+  if (Beats_Error)
   {
     displayHeartBeatNotDetected();
-  
-  }else if (Array_Error)
+  }
+  else if (Array_Error)
   {
     displayTimeOutError();
   }
@@ -288,7 +215,7 @@ int main()
         clear_screen();
         stateChanged = false;
       }
-      dataAnalysis();
+      analysisScene();
       break;
     case RESULTS_STATE:
       if (stateChanged)
@@ -301,7 +228,7 @@ int main()
     case ERROR_STATE:
       if (stateChanged)
       {
-        lcd.Clear(LCD_COLOR_BLACK);
+        clear_screen();
         stateChanged = false;
       }
       errorScene();
