@@ -2,14 +2,19 @@
 #include "sensor.h"
 #include "graphics.h"
 
-#define WAITING_STATE 1
-#define READING_STATE 2
-#define ANALYSIS_STATE 3
-#define RESULTS_STATE 4
+
+
+#define WAITING_STATE 0
+#define READING_STATE 1
+#define ANALYSIS_STATE 2
+#define RESULTS_STATE 3
+#define ERROR_STATE 4
+
 
 #define BUTTON_PUSH_EVENT 1
 #define PRESSURE_MIN_EVENT 2
 #define ANALYSIS_COMPLETE_EVENT 3
+#define ERROR_EVENT 4
 
 volatile uint8_t state;
 volatile bool stateChanged;
@@ -25,6 +30,12 @@ int diastolic_pressure;
 uint16_t numReadings;
 
 bool MaxPressure_Reached = false;
+
+bool Beats_Error = false;
+bool Array_Error = false;
+bool Slow_deflation = false;
+
+
 
 void stateMachine(uint8_t event)
 {
@@ -55,9 +66,18 @@ void stateMachine(uint8_t event)
     if (event == ANALYSIS_COMPLETE_EVENT)
     {
       next_state = RESULTS_STATE;
+    }else if (event == ERROR_EVENT)
+    {
+      next_state = ERROR_STATE;
     }
     break;
   case RESULTS_STATE:
+    if (event == BUTTON_PUSH_EVENT)
+    {
+      next_state = WAITING_STATE;
+    }
+    break;
+  case ERROR_STATE:
     if (event == BUTTON_PUSH_EVENT)
     {
       next_state = WAITING_STATE;
@@ -104,7 +124,7 @@ void pressureReadingScene()
   {
     stateMachine(PRESSURE_MIN_EVENT);
   }
-  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 0.8)
+  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 4)
   {
     display_slow_down_message();
   }
@@ -112,7 +132,15 @@ void pressureReadingScene()
   {
     clear_slow_down_message();
   }
+
   numReadings++;
+  printf("Num %d\n", numReadings);
+  if(numReadings >= 10)
+  {
+    Array_Error = true;
+    stateMachine(ERROR_EVENT);
+    return;
+  }
 }
 
 void waitingScene()
@@ -164,7 +192,13 @@ void dataAnalysis()
     }
   }
   printf("Num beats %d \n", numBeats);
-
+  if (numBeats == 0 || numBeats < 3)
+  {
+    Beats_Error = true;
+    stateMachine(ERROR_EVENT);
+    return;
+  }
+  
   float max_amplitude = 0;
   int max_amp_index = startingIndex;
 
@@ -202,6 +236,18 @@ void dataAnalysis()
 void resultsScene()
 {
   display_results(Heart_Rate, systolic_pressure, diastolic_pressure);
+}
+
+void errorScene()
+{
+  if(Beats_Error)
+  {
+    displayHeartBeatNotDetected();
+  
+  }else if (Array_Error)
+  {
+    displayTimeOutError();
+  }
 }
 
 int main()
@@ -251,6 +297,14 @@ int main()
         stateChanged = false;
       }
       resultsScene();
+      break;
+    case ERROR_STATE:
+      if (stateChanged)
+      {
+        lcd.Clear(LCD_COLOR_BLACK);
+        stateChanged = false;
+      }
+      errorScene();
       break;
     default:
       break;

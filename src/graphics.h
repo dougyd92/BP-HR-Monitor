@@ -109,4 +109,13 @@ void display_results(int hr, int systolic, int diastolic)
   lcd.DisplayStringAt(0, LINE(4), (uint8_t *)display_buf[3], LEFT_MODE);
 }
 
+void displayHeartBeatNotDetected()
+{
+
+}
+
+void displayTimeOutError()
+{
+  
+}
 #endif
