@@ -54,6 +54,9 @@ void stateMachine(uint8_t event)
     case PRESSURE_MIN_EVENT:
       next_state = ANALYSIS_STATE;
       break;
+    case ERROR_EVENT:
+      next_state = ERROR_STATE;
+      break;
     default:
       break;
     }
