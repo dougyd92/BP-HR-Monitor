@@ -12,14 +12,15 @@ LCD_DISCO_F429ZI lcd;
 
 uint32_t graph_width = lcd.GetXSize() - 2 * GRAPH_PADDING;
 uint32_t graph_height = graph_width;
-
-char display_buf[4][60];
+//4 60 
+char display_buf[10][60];
 
 // sets the background layer
 // to be visible, transparent, and
 // resets its colors to all black
 void setup_background_layer()
 {
+  lcd.SetFont(&Font12);
   lcd.SelectLayer(BACKGROUND);
   lcd.Clear(LCD_COLOR_BLACK);
   lcd.SetBackColor(LCD_COLOR_BLACK);
@@ -83,11 +84,27 @@ void clear_slow_down_message()
 
 void display_instructions()
 {
-  snprintf(display_buf[0], 60, "TODO");
-  snprintf(display_buf[1], 60, "Instructions go here");
+  snprintf(display_buf[0], 60, "Douglas de Jesus and Mateo Bonilla");
+  snprintf(display_buf[1], 60, "Instructions:");
+  snprintf(display_buf[2], 60, "Place cuff in right arm");
+  snprintf(display_buf[3], 60, "Patient must stay steady");
+  snprintf(display_buf[4], 60, "To start, press blue button");
+  snprintf(display_buf[5], 60, "Increase pressure up to 150mmHg");
+  snprintf(display_buf[6], 60, "Then, release pressure slowly");
+  snprintf(display_buf[7], 60, "Reach to 30mmH and wait for result");
+  snprintf(display_buf[8], 60, "System trigger error if ");
+  snprintf(display_buf[9], 60, "measurements are wrong");
 
-  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(3), (uint8_t *)display_buf[1], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(5), (uint8_t *)display_buf[2], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(6), (uint8_t *)display_buf[3], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(7), (uint8_t *)display_buf[4], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(8), (uint8_t *)display_buf[5], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(9), (uint8_t *)display_buf[6], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(10), (uint8_t *)display_buf[7], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(11), (uint8_t *)display_buf[8], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(12), (uint8_t *)display_buf[9], LEFT_MODE);
 }
 
 void display_analyzing_data_message()
