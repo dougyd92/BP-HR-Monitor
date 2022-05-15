@@ -134,8 +134,8 @@ void pressureReadingScene()
   }
 
   numReadings++;
-  printf("Num %d\n", numReadings);
-  if (numReadings >= 10)
+  //printf("Num %d\n", numReadings);
+  if (numReadings >= 1000)
   {
     Array_Error = true;
     stateMachine(ERROR_EVENT);
@@ -160,7 +160,10 @@ void analysisScene()
     stateMachine(ERROR_EVENT);
   }
   else
+  {
     stateMachine(ANALYSIS_COMPLETE_EVENT);
+  }
+  
 }
 
 void resultsScene()
