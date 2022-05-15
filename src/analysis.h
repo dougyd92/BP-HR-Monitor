@@ -1,6 +1,8 @@
 #ifndef ANALYSIS_H
 #define ANALYSIS_H
 
+#include "constants.h"
+
 int findMinIndex(int start, int end, float *arr)
 {
   float min = arr[start];
@@ -24,7 +26,7 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
   int total_Time_Beats = 0;
   for (int i = 0; i < numReadings; i++)
   {
-    if (pressureY[i] > 150 && pressureY[i] > pressureY[i + 1])
+    if (pressureY[i] > MAX_PRESSURE && pressureY[i] > pressureY[i + 1])
     {
       startingIndex = i + 1;
       break;
@@ -73,7 +75,7 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
 
   printf("Diastolic index %d\n", diastolic_index);
   // Heart rate
-  Heart_Rate = float(total_Time_Beats) / (numBeats - 1) * (0.2) * 60;
+  Heart_Rate = float(total_Time_Beats) / (numBeats - 1) * (SAMPLE_PERIOD / 1000.0) * 60;
   printf("Heart Rate: %d \n", Heart_Rate);
 
   return 0;

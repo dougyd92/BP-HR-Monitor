@@ -2,6 +2,7 @@
 #include "sensor.h"
 #include "graphics.h"
 #include "analysis.h"
+#include "constants.h"
 
 #define WAITING_STATE 0
 #define READING_STATE 1
@@ -14,6 +15,8 @@
 #define ANALYSIS_COMPLETE_EVENT 3
 #define ERROR_EVENT 4
 
+#define PRESSURE_READY_FLAG 0b1
+
 volatile uint8_t state;
 volatile bool stateChanged;
 
@@ -23,9 +26,17 @@ bool Slow_deflation = false;
 
 InterruptIn buttonInterrupt(USER_BUTTON, PullDown);
 
+Ticker read_pressure_ticker;
+EventFlags flags;
+
+void tickerCallback()
+{
+  flags.set(PRESSURE_READY_FLAG);
+}
+
 uint8_t read_buf[32];
 
-float pressureY[1000];
+float pressureY[PRESSURE_BUFFER_SIZE];
 int Heart_Rate;
 int systolic_pressure;
 int diastolic_pressure;
@@ -101,13 +112,15 @@ void buttonEvent()
 void setUpPressureReadingScene()
 {
   clear_screen();
-  draw_graph_window(10);
+  draw_graph_window();
   numReadings = 0;
   MaxPressure_Reached = false;
 }
 
 void pressureReadingScene()
 {
+  flags.wait_all(PRESSURE_READY_FLAG);
+
   float pressure = readPressure();
 
   display_current_pressure(pressure);
@@ -116,15 +129,15 @@ void pressureReadingScene()
 
   graph_pressure_value(pressure, numReadings);
 
-  if (pressure >= 150)
+  if (pressure >= MAX_PRESSURE)
   {
     MaxPressure_Reached = true;
   }
-  else if (MaxPressure_Reached && pressure < 30)
+  else if (MaxPressure_Reached && pressure < MIN_PRESSURE)
   {
     stateMachine(PRESSURE_MIN_EVENT);
   }
-  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > 4)
+  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > MAX_DEFLATION_RATE)
   {
     display_slow_down_message();
   }
@@ -134,8 +147,8 @@ void pressureReadingScene()
   }
 
   numReadings++;
-  //printf("Num %d\n", numReadings);
-  if (numReadings >= 1000)
+  // printf("Num %d\n", numReadings);
+  if (numReadings >= PRESSURE_BUFFER_SIZE)
   {
     Array_Error = true;
     stateMachine(ERROR_EVENT);
@@ -163,7 +176,6 @@ void analysisScene()
   {
     stateMachine(ANALYSIS_COMPLETE_EVENT);
   }
-  
 }
 
 void resultsScene()
@@ -194,6 +206,9 @@ int main()
   setupSensor();
 
   buttonInterrupt.rise(&buttonEvent);
+
+  std::chrono::milliseconds ticker_period{SAMPLE_PERIOD};
+  read_pressure_ticker.attach(tickerCallback, ticker_period);
 
   while (1)
   {
@@ -242,7 +257,5 @@ int main()
     default:
       break;
     }
-    // stateChanged = false;
-    thread_sleep_for(200);
   }
 }
