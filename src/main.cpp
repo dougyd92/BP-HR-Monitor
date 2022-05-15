@@ -122,11 +122,9 @@ void pressureReadingScene()
   flags.wait_all(PRESSURE_READY_FLAG);
 
   float pressure = readPressure();
-
-  display_current_pressure(pressure);
-
   pressureY[numReadings] = pressure;
 
+  display_current_pressure(pressure);
   graph_pressure_value(pressure, numReadings);
 
   if (pressure >= MAX_PRESSURE)
@@ -137,17 +135,25 @@ void pressureReadingScene()
   {
     stateMachine(PRESSURE_MIN_EVENT);
   }
-  if (MaxPressure_Reached && pressureY[numReadings - 1] - pressure > MAX_DEFLATION_RATE)
+
+  if (MaxPressure_Reached)
   {
-    display_slow_down_message();
+    if (pressure > MAX_PRESSURE - 10)
+      display_start_deflating_message();
+    else if (pressureY[numReadings - 1] - pressure > MAX_DEFLATION_RATE)
+      display_slow_down_message();
+    else
+      display_keep_deflating_message();
   }
   else
   {
-    clear_slow_down_message();
+    if (pressure < MIN_PRESSURE)
+      display_start_inflating_message();
+    else
+      display_keep_inflating_message();
   }
 
   numReadings++;
-  // printf("Num %d\n", numReadings);
   if (numReadings >= PRESSURE_BUFFER_SIZE)
   {
     Array_Error = true;

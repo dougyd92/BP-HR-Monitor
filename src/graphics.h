@@ -14,8 +14,12 @@ LCD_DISCO_F429ZI lcd;
 
 uint32_t graph_width = lcd.GetXSize() - 2 * GRAPH_PADDING;
 uint32_t graph_height = graph_width;
-// 4 60
-char display_buf[12][60];
+
+void clear_line(uint32_t line)
+{
+  char clear[] = "                                                            ";
+  lcd.DisplayStringAt(0, line, (uint8_t *)clear, LEFT_MODE);
+}
 
 // sets the background layer
 // to be visible, transparent, and
@@ -62,6 +66,7 @@ void clear_screen()
 
 void display_current_pressure(float pressure)
 {
+  char display_buf[1][60];
   lcd.SetFont(&Font16);
   snprintf(display_buf[0], 60, "Pressure %4.5f mmHg", pressure);
   lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
@@ -75,18 +80,52 @@ void graph_pressure_value(float pressure, int index)
 
 void display_slow_down_message()
 {
+  char display_buf[1][60];
+  snprintf(display_buf[0], 60, "Slow Down");
   lcd.SetFont(&Font16);
-  snprintf(display_buf[1], 60, "Slow Down");
-  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[1], LEFT_MODE);
+  clear_line(LINE(16));
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[0], LEFT_MODE);
 }
 
-void clear_slow_down_message()
+void display_start_deflating_message()
 {
-  lcd.ClearStringLine(LINE(16));
+  char display_buf[1][60];
+  snprintf(display_buf[0], 60, "Start deflating now");
+  lcd.SetFont(&Font16);
+  clear_line(LINE(16));
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[0], LEFT_MODE);
+}
+
+void display_start_inflating_message()
+{
+  char display_buf[1][60];
+  snprintf(display_buf[0], 60, "Start inflating now");
+  lcd.SetFont(&Font16);
+  clear_line(LINE(16));
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[0], LEFT_MODE);
+}
+
+void display_keep_deflating_message()
+{
+  char display_buf[1][60];
+  snprintf(display_buf[0], 60, "Keep deflating");
+  lcd.SetFont(&Font16);
+  clear_line(LINE(16));
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[0], LEFT_MODE);
+}
+
+void display_keep_inflating_message()
+{
+  char display_buf[1][60];
+  snprintf(display_buf[0], 60, "Keep inflating");
+  lcd.SetFont(&Font16);
+  clear_line(LINE(16));
+  lcd.DisplayStringAt(0, LINE(16), (uint8_t *)display_buf[0], LEFT_MODE);
 }
 
 void display_instructions()
 {
+  char display_buf[12][60];
   snprintf(display_buf[0], 60, "Douglas de Jesus and Mateo Bonilla");
 
   snprintf(display_buf[1], 60, "Instructions:");
@@ -123,6 +162,7 @@ void display_instructions()
 
 void display_analyzing_data_message()
 {
+  char display_buf[1][60];
   snprintf(display_buf[0], 60, "Analyzing data...");
   lcd.SetFont(&Font16);
   lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
@@ -130,6 +170,7 @@ void display_analyzing_data_message()
 
 void display_results(int hr, int systolic, int diastolic)
 {
+  char display_buf[4][60];
   snprintf(display_buf[0], 60, "Heart Rate: ");
   snprintf(display_buf[1], 60, "%d BPM", hr);
   snprintf(display_buf[2], 60, "Blood pressure:");
@@ -147,6 +188,7 @@ void display_results(int hr, int systolic, int diastolic)
 
 void displayHeartBeatNotDetected()
 {
+  char display_buf[2][60];
   snprintf(display_buf[0], 60, "No heartbeat detected.");
   snprintf(display_buf[1], 60, "Are you a zombie?");
   lcd.SetFont(&Font16);
@@ -156,6 +198,7 @@ void displayHeartBeatNotDetected()
 
 void displayTimeOutError()
 {
+  char display_buf[1][60];
   snprintf(display_buf[0], 60, "Timed out");
   lcd.SetFont(&Font16);
   lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
