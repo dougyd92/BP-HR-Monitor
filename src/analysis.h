@@ -32,7 +32,6 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
       break;
     }
   }
-  printf("Starting index %d \n", startingIndex);
   for (int i = startingIndex; i < numReadings - 1; i++)
   {
     if (pressureY[i] > pressureY[i - 1] && pressureY[i] > pressureY[i + 1])
@@ -41,10 +40,10 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
       numBeats++;
     }
   }
-  printf("Num beats %d \n", numBeats);
   if (numBeats == 0 || numBeats < 3)
   {
-    return 1; // Beats_Error
+    printf("numBeats %d", numBeats);
+    return NO_PULSE_ERROR;
   }
 
   float max_amplitude = 0;
@@ -55,9 +54,7 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
     total_Time_Beats += localMax[i + 1] - localMax[i];
 
     int min_index = findMinIndex(localMax[i], localMax[i + 1], pressureY);
-    printf("Min index between %d %d = %d \n", localMax[i], localMax[i + 1], min_index);
     float amplitude = pressureY[localMax[i]] - pressureY[min_index];
-    printf("Amplitude: %4.0f \n", amplitude);
 
     if (amplitude > max_amplitude)
     {
@@ -65,18 +62,25 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
       max_amp_index = localMax[i];
     }
   }
-  printf("Max amplitude index %d\n", max_amp_index);
-  printf("Local max %d\n", localMax[0]);
+
   // Blood pressure
   systolic_pressure = pressureY[localMax[0]];
 
   int diastolic_index = 2 * max_amp_index - localMax[0];
   diastolic_pressure = pressureY[diastolic_index];
 
-  printf("Diastolic index %d\n", diastolic_index);
   // Heart rate
   Heart_Rate = float(total_Time_Beats) / (numBeats - 1) * (SAMPLE_PERIOD / 1000.0) * 60;
-  printf("Heart Rate: %d \n", Heart_Rate);
+
+  // Sanity check
+  if (diastolic_pressure >= systolic_pressure ||
+      systolic_pressure > SANITY_BP_UPPER_BOUND ||
+      diastolic_pressure < MIN_PRESSURE)
+    return BAD_DATA_ERROR;
+
+  if (Heart_Rate > SANITY_HR_UPPER_BOUND ||
+      Heart_Rate < SANITY_HR_LOWER_BOUND)
+    return BAD_DATA_ERROR;
 
   return 0;
 }

@@ -68,7 +68,7 @@ void display_current_pressure(float pressure)
 {
   char display_buf[1][60];
   lcd.SetFont(&Font16);
-  snprintf(display_buf[0], 60, "Pressure %4.5f mmHg", pressure);
+  snprintf(display_buf[0], 60, "Pressure %4.5f mm Hg", pressure);
   lcd.DisplayStringAt(0, LINE(17), (uint8_t *)display_buf[0], LEFT_MODE);
 }
 
@@ -188,19 +188,67 @@ void display_results(int hr, int systolic, int diastolic)
 
 void displayHeartBeatNotDetected()
 {
-  char display_buf[2][60];
-  snprintf(display_buf[0], 60, "No heartbeat detected.");
-  snprintf(display_buf[1], 60, "Are you a zombie?");
   lcd.SetFont(&Font16);
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
-  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)display_buf[1], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)"No pulse detected.", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)"Are you a zombie?", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(4), (uint8_t *)"Make sure the cuff is", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"tight and positioned", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(6), (uint8_t *)"correctly.", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(7), (uint8_t *)"Make sure to deflate", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(8), (uint8_t *)"slowly.", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(10), (uint8_t *)"Press the blue button", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(11), (uint8_t *)"to try again.", LEFT_MODE);
 }
 
 void displayTimeOutError()
 {
-  char display_buf[1][60];
-  snprintf(display_buf[0], 60, "Timed out");
   lcd.SetFont(&Font16);
-  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)"Took too long to", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)"reach the target", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(3), (uint8_t *)"pressure.", LEFT_MODE);
+
+  char display_buf[2][60];
+  snprintf(display_buf[0], 60, "%dmm Hg.", MAX_PRESSURE);
+  snprintf(display_buf[1], 60, "to %dmm Hg.", MIN_PRESSURE);
+  lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"First, inflate to", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(6), (uint8_t *)display_buf[0], LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(7), (uint8_t *)"Then, deflate slowly", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(8), (uint8_t *)"(but not too slowly)", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(9), (uint8_t *)display_buf[1], LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(11), (uint8_t *)"Press the blue button", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(12), (uint8_t *)"to try again.", LEFT_MODE);
 }
+
+void displayBadDataError()
+{
+  lcd.SetFont(&Font16);
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)"Unable to get an", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)"accurate reading.", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(4), (uint8_t *)"Make sure the cuff is", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"tight and positioned", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(6), (uint8_t *)"correctly.", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(7), (uint8_t *)"Make sure to deflate", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(8), (uint8_t *)"slowly.", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(10), (uint8_t *)"Press the blue button", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(11), (uint8_t *)"to try again.", LEFT_MODE);
+}
+
+void displaySensorConnectionError()
+{
+  lcd.SetFont(&Font16);
+  lcd.DisplayStringAt(0, LINE(1), (uint8_t *)"Could not communicate", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(2), (uint8_t *)"with the sensor.", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(4), (uint8_t *)"Check the connection", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(5), (uint8_t *)"and try again.", LEFT_MODE);
+
+  lcd.DisplayStringAt(0, LINE(10), (uint8_t *)"Press the blue button", LEFT_MODE);
+  lcd.DisplayStringAt(0, LINE(11), (uint8_t *)"to try again.", LEFT_MODE);
+}
+
 #endif

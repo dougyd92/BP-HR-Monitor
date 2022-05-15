@@ -15,10 +15,9 @@ void setupSensor()
   spi.frequency(50000);
 }
 
-float readPressure()
+int readPressure(float &pressure)
 {
   int32_t raw_pressure;
-  float pressure;
 
   uint8_t read_buffer[4];
 
@@ -32,10 +31,14 @@ float readPressure()
   spi.write((const char *)read_measurement_cmd, 4, (char *)read_buffer, 4);
   chip_select = 1;
 
+  // Check status value
+  if (read_buffer[0] == 0xFF)
+    return SENSOR_CONNECTION_ERROR;
+
   raw_pressure = ((((uint32_t)read_buffer[1]) << 16) | ((uint32_t)read_buffer[2]) << 8) | ((uint8_t)read_buffer[3]);
   pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
 
   printf("Pressure: %4.5f \n", pressure);
 
-  return pressure;
+  return 0;
 }
