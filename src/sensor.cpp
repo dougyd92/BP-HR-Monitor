@@ -1,9 +1,9 @@
 /*
 This file contains the configuration to establish communication with the sensor. This file contains
 to functions, the first one (setupSensor) is used for general configurations of the communication
-protocol (SPI) such as the frequency and mode of operation. The second function (readPressure) is 
+protocol (SPI) such as the frequency and mode of operation. The second function (readPressure) is
 used to perform the communication transaction using SPI to retrieve the data read from the sensor.
-In addition, some basic transformations using the transfer function of the sensor are performed to 
+In addition, some basic transformations using the transfer function of the sensor are performed to
 determine the actual value of the pressure in mmHg
 */
 #include "sensor.h"
@@ -45,8 +45,6 @@ int readPressure(float &pressure)
 
   raw_pressure = ((((uint32_t)read_buffer[1]) << 16) | ((uint32_t)read_buffer[2]) << 8) | ((uint8_t)read_buffer[3]);
   pressure = (((((float)raw_pressure) - 419430.4) * (300)) / (3774873.6 - 419430.4));
-
-  printf("Pressure: %4.5f \n", pressure);
 
   return 0;
 }
