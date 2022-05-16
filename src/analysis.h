@@ -1,9 +1,9 @@
 /*
-This file is created to analyze the pressure data that it is read by the sensor. Inside this 
-file the are two functions, findMinIndex and analyze_data. The first function is used to find 
+This file is created to analyze the pressure data that it is read by the sensor. Inside this
+file the are two functions, findMinIndex and analyze_data. The first function is used to find
 the index of the local minimum inside the array of measured data. The second function is used
-to determine the systolic and diastolic pressure by finding the local maximum of the data in 
-the graph.  
+to determine the systolic and diastolic pressure by finding the local maximum of the data in
+the graph.
 */
 
 #ifndef ANALYSIS_H
@@ -50,7 +50,6 @@ int analyze_data(float *pressureY, int numReadings, int &systolic_pressure, int 
   }
   if (numBeats == 0 || numBeats < 3)
   {
-    printf("numBeats %d", numBeats);
     return NO_PULSE_ERROR;
   }
 
