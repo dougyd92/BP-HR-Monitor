@@ -18,6 +18,8 @@ Patients can administer the test in their own homes without the presence of medi
 and with no prior training.
 It does not require a stethoscope nor an external timer.
 
+Watch a brief [demonstration video](https://drive.google.com/file/d/1hbiis3CEqva6tCVKJKqktwyCbu6xl_WN/view?usp=sharing).
+
 ![Materials](assets/Materials.png?raw=true "Materials")
 
 ## Hardware
