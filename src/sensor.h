@@ -1,3 +1,7 @@
+/*
+This file constains the pin declaration for the SPI connection of the sensor with the board. In addition
+it gives the constructor for the functions that are later declared in the sensor.cpp file.
+*/
 #ifndef SENSOR_H
 #define SENSOR_H
 

@@ -1,3 +1,8 @@
+/*
+This file contains the main function declaration for all the program to work. It contains the main state 
+machine that conrols the overall execution of the program. Also, it has the code to provide all the error
+handling for the anormal cases in the execution. 
+*/
 #include <mbed.h>
 #include "sensor.h"
 #include "graphics.h"
