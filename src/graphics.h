@@ -1,3 +1,10 @@
+/*
+This file contains all the information and functions that are used to create the graphs and 
+display information and data on the LCD depending on the which state of the exeuction process
+is the user. In addition, all the data and constants for setting up the LCD are described here
+as well as the all the data and information that it is displayed on the screen when a new scene
+is being executed.
+*/
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 

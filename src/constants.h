@@ -1,3 +1,7 @@
+/*
+This file contains all the constants that are used along the program. All of this constants
+contain important information that support the correct functionality of the program. 
+*/
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 

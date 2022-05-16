@@ -1,3 +1,11 @@
+/*
+This file contains the configuration to establish communication with the sensor. This file contains
+to functions, the first one (setupSensor) is used for general configurations of the communication
+protocol (SPI) such as the frequency and mode of operation. The second function (readPressure) is 
+used to perform the communication transaction using SPI to retrieve the data read from the sensor.
+In addition, some basic transformations using the transfer function of the sensor are performed to 
+determine the actual value of the pressure in mmHg
+*/
 #include "sensor.h"
 #include <mbed.h>
 
